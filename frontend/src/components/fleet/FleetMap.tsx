@@ -2,11 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import {
-  HUB_LOCATION,
-  jitterLatLng,
-  resolveAreaLocation,
-} from "@/lib/locations";
+import { jitterLatLng, resolveAreaLocation } from "@/lib/locations";
 import type { DriverInsight, VehicleInsight } from "@/lib/fleet-insights";
 import type { OsmMapUnit } from "@/components/fleet/OsmMapInner";
 import { Badge } from "@/components/ui/badge";
@@ -113,8 +109,7 @@ export function FleetMap({
           <div>
             <p className="text-sm font-semibold">Live board map</p>
             <p className="text-xs text-muted-foreground">
-              OpenStreetMap · bikes in each rider’s usual zone (not live GPS).
-              Hub at {HUB_LOCATION.label}.
+              Usual zones. Not live GPS.
             </p>
           </div>
           <Badge variant="secondary" className="tabular">

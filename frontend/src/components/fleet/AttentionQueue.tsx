@@ -89,7 +89,7 @@ export function AttentionQueue({
         {groups.length === 0 ? (
           <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
             <CheckCircle2 className="size-4 text-[var(--go)]" />
-            Nothing here — board is clear
+            Nothing here
           </div>
         ) : (
           <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">

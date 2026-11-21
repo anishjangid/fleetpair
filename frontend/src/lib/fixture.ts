@@ -1,12 +1,12 @@
 import type { Fixture } from "./types";
 
 /**
- * Indiranagar live floor — riders check in and leave all day.
+ * Indiranagar live floor - riders check in and leave all day.
  * Assignments are on the go: waiting → match → out → release.
  */
 export const FIXTURE: Fixture = {
   hubName: "Indiranagar Hub",
-  shiftLabel: "Live floor · all day",
+  shiftLabel: "Live floor",
   dailyRentInr: 250,
   reserveSocPct: 10,
   criticalRiderIds: ["asha", "ravi"],
@@ -17,7 +17,7 @@ export const FIXTURE: Fixture = {
    */
   initialAssignments: {
     asha: "x",
-    ravi: null, // just arrived — needs a bike
+    ravi: null, // just arrived - needs a bike
     meera: "z",
     kabir: "w",
     priya: null, // first week, waiting

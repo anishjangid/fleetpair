@@ -5,9 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "fleetpair · morning handover for EV rental hubs",
-  description:
-    "Match delivery riders with scooters and batteries using usage patterns, pack range and vehicle health.",
+  title: "fleetpair",
+  description: "Match delivery riders to EV scooters and packs.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

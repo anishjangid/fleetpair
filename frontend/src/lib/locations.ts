@@ -18,7 +18,7 @@ export const HUB_LOCATION: MapPoint & { label: string } = {
   lng: 77.6408,
 };
 
-/** Soft zone centroids around the hub — keyed by rider.usualArea */
+/** Soft zone centroids around the hub - keyed by rider.usualArea */
 export const AREA_LOCATIONS: Record<string, MapPoint & { short: string }> = {
   "Koramangala / HSR": {
     short: "Koramangala",

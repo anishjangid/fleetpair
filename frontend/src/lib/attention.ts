@@ -1,6 +1,6 @@
 /**
  * What the hub manager needs to handle right now.
- * Plain floor language — not product/AI copy.
+ * Plain floor language - not product/AI copy.
  */
 
 import type { DriverInsight, FleetPortfolio } from "./fleet-insights";

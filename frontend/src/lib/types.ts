@@ -25,7 +25,7 @@ export interface Scooter {
 export interface Rider {
   id: string;
   name: string;
-  /** Soft signal only — delivery areas drift; not a fixed route. */
+  /** Soft signal only - delivery areas drift; not a fixed route. */
   usualArea: string;
   /** Typical day distance inferred from recent tracked shifts. */
   dailyKm: number;

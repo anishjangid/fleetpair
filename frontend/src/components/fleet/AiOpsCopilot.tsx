@@ -150,7 +150,7 @@ export function AiOpsCopilot({
 
   function toggleListen() {
     if (!voiceSupported) {
-      toast.message("Voice not supported in this browser — type a command instead");
+      toast.message("Voice not supported. Type a command.");
       setOpen(true);
       return;
     }
@@ -326,7 +326,7 @@ export function AiOpsCopilot({
               listening && "ai-mic-pulse border-primary bg-primary text-primary-foreground",
             )}
             aria-label="Help"
-            title="Help — click to type, right-click to talk"
+            title="Help"
           >
             {listening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
           </button>

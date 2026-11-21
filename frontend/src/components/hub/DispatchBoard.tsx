@@ -9,6 +9,7 @@ import {
   releaseRider,
 } from "@/lib/scoring";
 import type { AssignmentMap } from "@/lib/types";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,23 +61,26 @@ export function DispatchBoard({
   return (
     <div className="space-y-4 sm:space-y-5">
       <div className="surface flex flex-col gap-3 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          <span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className="inline-flex items-center gap-1">
             Out{" "}
-            <strong className="tabular">
-              {hub.outCount}
-            </strong>
+            <strong className="tabular">{hub.outCount}</strong>
+            <InfoTip text="Riders currently out on an assigned bike." />
           </span>
-          <span>
+          <span className="inline-flex items-center gap-1">
             Waiting{" "}
             <strong className="tabular">{hub.waitingCount}</strong>
+            <InfoTip text="Riders at the hub who still need a bike." />
           </span>
-          <span>
+          <span className="inline-flex items-center gap-1">
             Free bikes{" "}
             <strong className="tabular">{hub.freeBikes.length}</strong>
+            <InfoTip text="Scooters ready to hand out right now." />
           </span>
-          <span>
-            Rent now <strong className="tabular">₹{hub.grossRentInr}</strong>
+          <span className="inline-flex items-center gap-1">
+            Rent now{" "}
+            <strong className="tabular">₹{hub.grossRentInr}</strong>
+            <InfoTip text="Daily rent from riders whose current match covers the shift." />
           </span>
         </div>
         {waiting.length > 0 && hub.freeBikes.length > 0 && (
@@ -134,7 +138,7 @@ export function DispatchBoard({
             ))}
             {waiting.length === 0 && (
               <li className="px-3 py-6 text-sm text-muted-foreground sm:px-4">
-                Nobody waiting — riders can check in anytime.
+                Nobody waiting.
               </li>
             )}
           </ul>

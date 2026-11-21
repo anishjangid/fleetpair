@@ -1,6 +1,6 @@
 /**
  * Service forecast + past issues from rider/vehicle behaviour.
- * Demo model for hub managers — plain costs and dates, not ML jargon.
+ * Demo model for hub managers - plain costs and dates, not ML jargon.
  */
 
 import type { Rider, Scooter, Pack } from "./types";
@@ -35,7 +35,7 @@ export type BehaviourIssue = {
   riderId?: string;
 };
 
-/** Split of workshop spend — what managers ask for on the floor. */
+/** Split of workshop spend - what managers ask for on the floor. */
 export type ServiceCostSplit = {
   partsInr: number;
   labourInr: number;
@@ -142,7 +142,7 @@ export function buildVehicleIssues(
       id: `${scooter.id}-pack`,
       kind: "pack_fade",
       title: "Pack fading",
-      detail: `SOH ${pack.testedSohPct}% — riders may feel short range`,
+      detail: `SOH ${pack.testedSohPct}%. Range may feel short.`,
       raisedOn: daysAgo(8 + (seed % 6)),
       source: "bike",
       costInr: 600 + (seed % 3) * 150,
@@ -263,7 +263,7 @@ export function buildRiderIssues(
       id: `${rider.id}-load`,
       kind: "hard_ride",
       title: "Heavy load days",
-      detail: `${rider.highLoadEpisodes} high-load episodes — wears pads faster`,
+      detail: `${rider.highLoadEpisodes} high-load episodes. Pads wear faster.`,
       raisedOn: daysAgo(2 + (seed % 6)),
       source: "rider",
       costInr: 0,
@@ -298,7 +298,7 @@ export function buildRiderIssues(
     issues.push({
       id: `${rider.id}-new`,
       kind: "range_complaint",
-      title: "Thin history — watch first weeks",
+      title: "Thin history. Watch first weeks.",
       detail: `Only ${rider.trackedShifts} shifts tracked`,
       raisedOn: daysAgo(0),
       source: "hub",
@@ -355,10 +355,10 @@ export function forecastService(
 
   const reason =
     risk === "high"
-      ? "Past behaviour + km left say this will need the bay soon"
+      ? "Needs the bay soon"
       : risk === "medium"
-        ? "Usage pattern is pulling service forward"
-        : "On track for normal interval";
+        ? "Service pulling forward"
+        : "On interval";
 
   return {
     nextServiceInDays,

@@ -127,23 +127,19 @@ export function inferUsagePattern(rider: Rider): UsagePattern {
   if (wear.learning) {
     label = "Thin history";
     detail =
-      "Few tracked shifts — treat swap-gap as provisional until peer coverage builds.";
+      "Few tracked shifts. Treat swap gap as provisional.";
   } else if (gap >= day * 0.85) {
     label = "Long single-pack stretch";
-    detail =
-      "Behaviour shows long gaps between dependable swaps. Needs range that can finish the stretch.";
+    detail = "Long gaps between swaps. Needs enough range.";
   } else if (gap <= 30 && day >= 80) {
     label = "Dense swap habit";
-    detail =
-      "High daily km but short observed gaps between swaps — can clear on a mid-range pack.";
+    detail = "High day km, short gaps. Mid-range pack is fine.";
   } else if (wear.band === "elevated") {
     label = "Hard usage pattern";
-    detail =
-      "Elevated damage / high-load density from tracked riding. Pair with a ready unit and tighter handover.";
+    detail = "High wear. Pair with a ready bike.";
   } else {
     label = "Steady delivery pattern";
-    detail =
-      "Stable tracked distance and swap gaps. Standard match against pack range is enough.";
+    detail = "Stable distance and swap gaps.";
   }
 
   const historyDepth = wear.learning
@@ -232,7 +228,7 @@ function buildPairing(rider: Rider, asset: Asset): Pairing {
   };
 }
 
-/** Best free bike for a waiting rider — longest pack that covers their swap gap. */
+/** Best free bike for a waiting rider - longest pack that covers their swap gap. */
 export function suggestBikeForRider(
   rider: Rider,
   freeAssets: Asset[],
@@ -343,13 +339,13 @@ export function evaluateHub(
 
   let note: string | null = null;
   if (waitingCount > 0 && freeBikes.length === 0) {
-    note = `${waitingCount} rider${waitingCount === 1 ? "" : "s"} waiting — no free bikes.`;
+    note = `${waitingCount} waiting, no free bikes.`;
   } else if (waitingCount > 0) {
-    note = `${waitingCount} waiting · ${freeBikes.length} free bike${freeBikes.length === 1 ? "" : "s"}.`;
+    note = `${waitingCount} waiting, ${freeBikes.length} free.`;
   } else if (supported < active.length) {
     const short = active.find((p) => !p.fit.supportsBooking);
     note = short
-      ? `${short.riderName} is short on range — swap pack or bike before they leave.`
+      ? `${short.riderName} is short on range. Swap before they leave.`
       : null;
   }
 

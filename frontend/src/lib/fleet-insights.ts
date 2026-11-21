@@ -85,9 +85,9 @@ export type FleetPortfolio = {
   serviceSpendThisMonthInr: number;
   /** Expected service spend next 30 days if behaviour continues */
   serviceExpectedNext30Inr: number;
-  /** Parts / labour / consumables — spent this month */
+  /** Parts / labour / consumables - spent this month */
   serviceSpentSplit: ServiceCostSplit;
-  /** Parts / labour / consumables — expected next 30d */
+  /** Parts / labour / consumables - expected next 30d */
   serviceExpectedSplit: ServiceCostSplit;
   openIssueCount: number;
   bikesDueSoon: number;
@@ -176,12 +176,12 @@ export function buildFleetPortfolio(
 
     const predictedNote =
       service.risk === "high"
-        ? `Next bay visit ${service.nextServiceLabel.toLowerCase()} — ${service.reason.toLowerCase()}.`
+        ? `Bay ${service.nextServiceLabel.toLowerCase()}.`
         : stress >= 55
-          ? "This rider is hard on the bike — expect more pad / pack wear."
+          ? "Hard on the bike. Watch pads and pack."
           : healthScore >= 80
-            ? "Condition looks fine for the current match."
-            : "Keep an eye on service window and pack.";
+            ? "Condition looks fine."
+            : "Watch service window.";
 
     return {
       scooterId: scooter.id,

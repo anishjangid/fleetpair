@@ -68,14 +68,14 @@ export function ChallengePage() {
           Who gets the 65 km scooter?
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Shareable demo of the same handover decision — usage patterns, not
+          Shareable demo of the same handover. Usage patterns, not
           fixed routes.
         </p>
       </div>
 
       {hint && (
         <div className="rounded-xl border border-[color-mix(in_srgb,var(--warn)_30%,var(--border))] bg-[var(--warn-wash)] px-3 py-2 text-sm text-[var(--warn)]">
-          A friend challenged you — make your own call.
+          A friend challenged you. Make your call.
         </div>
       )}
 

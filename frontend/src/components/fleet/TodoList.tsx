@@ -4,7 +4,6 @@ import type { AttentionItem } from "@/lib/attention";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** Flat morning checklist — no section grids, no severity chrome. */
 export function TodoList({
   items,
   dismissed,
@@ -23,7 +22,7 @@ export function TodoList({
   if (open.length === 0) {
     return (
       <p className="surface px-4 py-6 text-sm text-muted-foreground">
-        Nothing urgent. Matches look fine for this morning.
+        Nothing urgent.
       </p>
     );
   }
@@ -46,7 +45,7 @@ export function TodoList({
               <p className="font-medium text-foreground">{item.title}</p>
               <p className="text-sm text-muted-foreground">
                 {item.entity}
-                {item.impact ? ` — ${item.impact}` : ""}
+                {item.impact ? `: ${item.impact}` : ""}
               </p>
             </div>
           </div>

@@ -6,6 +6,7 @@ import {
   Bike,
   ClipboardList,
   IndianRupee,
+  Info,
   Map,
   Users,
   Wrench,
@@ -26,6 +27,7 @@ import { TodoList } from "@/components/fleet/TodoList";
 import { FleetMap } from "@/components/fleet/FleetMap";
 import { AiOpsCopilot } from "@/components/fleet/AiOpsCopilot";
 import { DispatchBoard } from "@/components/hub/DispatchBoard";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +36,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 const NAV: { id: OpsTab; label: string; icon: typeof ClipboardList }[] = [
@@ -274,12 +281,18 @@ export function OpsDashboard() {
                 <Kpi
                   label="Covered"
                   value={`${portfolio.matchingQualityPct}%`}
+                  tip="Share of riders who are out on a bike right now, vs waiting at the hub."
                 />
                 <Kpi
                   label="Service 30d"
                   value={`₹${Math.round(portfolio.serviceExpectedNext30Inr / 1000)}k`}
+                  tip="Expected workshop spend in the next 30 days from open issues and due services."
                 />
-                <Kpi label="To do" value={`${todoLeft}`} />
+                <Kpi
+                  label="To do"
+                  value={`${todoLeft}`}
+                  tip="Open jobs on your checklist. Book bay, match waiting, or change a rider."
+                />
               </div>
 
               <div className="space-y-2">
@@ -291,29 +304,6 @@ export function OpsDashboard() {
                   onSkip={(id) =>
                     setDismissed((p) => new Set(p).add(id))
                   }
-                />
-              </div>
-
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <JumpCard
-                  title="Map"
-                  blurb="Where bikes are working"
-                  onClick={() => setTab("map")}
-                />
-                <JumpCard
-                  title="Matches"
-                  blurb="Who gets which bike"
-                  onClick={() => setTab("allocation")}
-                />
-                <JumpCard
-                  title="Service"
-                  blurb={`${portfolio.bikesDueSoon} due soon`}
-                  onClick={() => setTab("service")}
-                />
-                <JumpCard
-                  title="Bikes"
-                  blurb={`${portfolio.openIssueCount} open issues`}
-                  onClick={() => setTab("health")}
                 />
               </div>
             </section>
@@ -342,51 +332,47 @@ export function OpsDashboard() {
                 <Kpi
                   label="Spent"
                   value={`₹${Math.round(portfolio.serviceSpendThisMonthInr / 1000)}k`}
+                  tip="Workshop cost already logged this month across the fleet."
                 />
                 <Kpi
                   label="Next 30d"
                   value={`₹${Math.round(portfolio.serviceExpectedNext30Inr / 1000)}k`}
+                  tip="What you are likely to spend next month if open issues stay open."
                 />
-                <Kpi label="Due soon" value={`${portfolio.bikesDueSoon}`} />
+                <Kpi
+                  label="Due soon"
+                  value={`${portfolio.bikesDueSoon}`}
+                  tip="Bikes with service due in the next 10 days."
+                />
                 <Kpi
                   label="Open issues"
                   value={`${portfolio.openIssueCount}`}
+                  tip="Unresolved bike or rider issues still on the board."
                 />
               </div>
 
               <div className="surface space-y-3 px-3 py-3 sm:px-4">
-                <p className="text-sm font-semibold">Cost mix · this month</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-semibold">Spent this month</p>
+                  <InfoTip text="How this month’s workshop bill splits across parts, labour, and consumables." />
+                </div>
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <CostBucket
                     label="Parts"
                     value={portfolio.serviceSpentSplit.partsInr}
-                    hint="Pads, panels, harness"
+                    tip="Pads, panels, harness, pack parts already billed this month."
                   />
                   <CostBucket
                     label="Labour"
                     value={portfolio.serviceSpentSplit.labourInr}
-                    hint="Bay time"
+                    tip="Bay technician time already billed this month."
                   />
                   <CostBucket
                     label="Consumables"
                     value={portfolio.serviceSpentSplit.consumablesInr}
-                    hint="Fluids, fasteners"
+                    tip="Fluids, fasteners, and other small workshop materials."
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Next 30d expected · parts ₹
-                  {portfolio.serviceExpectedSplit.partsInr.toLocaleString(
-                    "en-IN",
-                  )}{" "}
-                  · labour ₹
-                  {portfolio.serviceExpectedSplit.labourInr.toLocaleString(
-                    "en-IN",
-                  )}{" "}
-                  · consumables ₹
-                  {portfolio.serviceExpectedSplit.consumablesInr.toLocaleString(
-                    "en-IN",
-                  )}
-                </p>
               </div>
 
               <div className="surface overflow-x-auto">
@@ -493,7 +479,7 @@ export function OpsDashboard() {
                           {v.scooterLabel}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {v.assignedRiderName ?? "—"}
+                          {v.assignedRiderName ?? "-"}
                         </td>
                         <td className="px-4 py-3">
                           <span
@@ -558,7 +544,7 @@ export function OpsDashboard() {
                           </p>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {d.assignedScooter ?? "—"}
+                          {d.assignedScooter ?? "-"}
                         </td>
                         <td className="px-4 py-3 tabular">
                           {d.issuesRaisedCount}
@@ -589,14 +575,17 @@ export function OpsDashboard() {
                 <Kpi
                   label="Rent"
                   value={`₹${Math.round(portfolio.monthlyLeaseBookInr / 1000)}k`}
+                  tip="Monthly rent from bikes that are currently earning."
                 />
                 <Kpi
                   label="Held"
                   value={`₹${Math.round(portfolio.residualProtectedInr / 1000)}k`}
+                  tip="Resale value still protected by condition and matching."
                 />
                 <Kpi
                   label="At risk"
                   value={`₹${Math.round(portfolio.residualAtRiskInr / 1000)}k`}
+                  tip="Resale value that can slip from wear, bad matches, or late service."
                 />
               </div>
               <div className="surface overflow-x-auto">
@@ -619,7 +608,7 @@ export function OpsDashboard() {
                           {v.scooterLabel}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {v.assignedRiderName ?? "—"}
+                          {v.assignedRiderName ?? "-"}
                         </td>
                         <td className="px-4 py-3 capitalize">
                           {v.leaseStatus}
@@ -657,13 +646,23 @@ export function OpsDashboard() {
                   <Meta
                     label="Spent"
                     value={`₹${selected.service.currentMonthSpendInr}`}
+                    tip="Workshop cost already logged on this bike this month."
                   />
                   <Meta
                     label="Next 30d"
                     value={`₹${selected.service.expectedNext30Inr}`}
+                    tip="Expected spend on this bike in the next 30 days."
                   />
-                  <Meta label="Condition" value={`${selected.healthScore}`} />
-                  <Meta label="Pack" value={`${selected.packSohPct}%`} />
+                  <Meta
+                    label="Condition"
+                    value={`${selected.healthScore}`}
+                    tip="0–100 score from readiness, pack SOH, and pairing stress."
+                  />
+                  <Meta
+                    label="Pack"
+                    value={`${selected.packSohPct}%`}
+                    tip="Battery state of health. Lower SOH means less usable range."
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -826,62 +825,87 @@ export function OpsDashboard() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({
+  label,
+  value,
+  tip,
+}: {
+  label: string;
+  value: string;
+  tip: string;
+}) {
   return (
-    <div className="surface px-2.5 py-2.5 sm:px-3 sm:py-3">
-      <p className="text-[10px] text-muted-foreground sm:text-xs">{label}</p>
-      <p className="mt-1 text-lg font-bold tracking-[-0.03em] tabular sm:text-xl">
-        {value}
-      </p>
-    </div>
+    <Tooltip>
+      <TooltipTrigger
+        type="button"
+        className="surface w-full px-2.5 py-2.5 text-left transition-colors hover:border-primary/35 sm:px-3 sm:py-3"
+      >
+        <div className="flex items-center gap-1">
+          <p className="text-[10px] text-muted-foreground sm:text-xs">{label}</p>
+          <Info
+            className="size-3 shrink-0 text-muted-foreground/80"
+            aria-hidden
+          />
+        </div>
+        <p className="mt-1 text-lg font-bold tracking-[-0.03em] tabular sm:text-xl">
+          {value}
+        </p>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[240px] text-xs leading-relaxed">
+        {tip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
 function CostBucket({
   label,
   value,
-  hint,
+  tip,
 }: {
   label: string;
   value: number;
-  hint: string;
+  tip: string;
 }) {
   return (
-    <div className="rounded-lg border border-border px-3 py-2.5">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className="mt-1 text-base font-bold tabular">
-        ₹{value.toLocaleString("en-IN")}
-      </p>
-      <p className="mt-0.5 text-[10px] text-muted-foreground">{hint}</p>
-    </div>
+    <Tooltip>
+      <TooltipTrigger
+        type="button"
+        className="w-full rounded-lg border border-border px-3 py-2.5 text-left transition-colors hover:border-primary/35"
+      >
+        <div className="flex items-center gap-1">
+          <p className="text-[11px] text-muted-foreground">{label}</p>
+          <Info
+            className="size-3 shrink-0 text-muted-foreground/80"
+            aria-hidden
+          />
+        </div>
+        <p className="mt-1 text-base font-bold tabular">
+          ₹{value.toLocaleString("en-IN")}
+        </p>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[240px] text-xs leading-relaxed">
+        {tip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
-function JumpCard({
-  title,
-  blurb,
-  onClick,
+function Meta({
+  label,
+  value,
+  tip,
 }: {
-  title: string;
-  blurb: string;
-  onClick: () => void;
+  label: string;
+  value: string;
+  tip?: string;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="surface px-4 py-3 text-left transition-colors hover:border-primary/40"
-    >
-      <p className="font-semibold">{title}</p>
-      <p className="mt-0.5 text-sm text-muted-foreground">{blurb}</p>
-    </button>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-border px-3 py-2">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <div className="flex items-center gap-1">
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        {tip ? <InfoTip text={tip} className="size-4" /> : null}
+      </div>
       <p className="mt-0.5 font-semibold tabular">{value}</p>
     </div>
   );

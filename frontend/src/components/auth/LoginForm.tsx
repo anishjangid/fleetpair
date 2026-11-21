@@ -28,7 +28,7 @@ export function LoginForm() {
       setError(result.error ?? "Sign-in failed");
       return;
     }
-    toast.success("Welcome back — morning board is ready.");
+    toast.success("Signed in");
     router.replace("/board");
   }
 
@@ -38,9 +38,7 @@ export function LoginForm() {
         <p className="text-[1.65rem] font-bold tracking-[-0.04em] text-foreground">
           fleetpair
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Hub sign-in for morning handover
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Hub sign-in</p>
       </div>
 
       <form className="space-y-4" onSubmit={onSubmit}>

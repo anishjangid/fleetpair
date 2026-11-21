@@ -104,26 +104,19 @@ export function ProfilePanel() {
             <CardHeader>
               <CardTitle className="text-base">Handover defaults</CardTitle>
               <CardDescription>
-                Simulated preferences for this prototype — wired for a future
-                fleet pilot.
+                Demo preferences for this hub.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <PrefRow
-                title="Auto-apply recommended plan"
-                description="Start each morning on the booking-maximising match."
-                defaultChecked
-              />
-              <Separator />
-              <PrefRow
-                title="Highlight critical conflicts"
-                description="Pin range conflicts that can drop a booking."
+                title="Auto-match waiting riders"
+                description="Suggest the best free bike when someone checks in."
                 defaultChecked
               />
               <Separator />
               <PrefRow
                 title="Show rent at risk"
-                description="Surface ₹ impact when a pairing falls short."
+                description="Show ₹ when a pairing falls short."
                 defaultChecked
               />
             </CardContent>
@@ -135,7 +128,7 @@ export function ProfilePanel() {
             <CardHeader>
               <CardTitle className="text-base">Sign-in</CardTitle>
               <CardDescription>
-                Demo accounts use a shared password. Production would use SSO.
+                Demo sign-in for this hub.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
