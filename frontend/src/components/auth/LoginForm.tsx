@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { DEMO_CREDENTIALS } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +12,8 @@ import { Label } from "@/components/ui/label";
 export function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState(DEMO_CREDENTIALS.email);
-  const [password, setPassword] = useState(DEMO_CREDENTIALS.password);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,12 +95,6 @@ export function LoginForm() {
           </span>
         </button>
       </form>
-
-      <div className="mt-5 rounded-xl border border-dashed border-border bg-muted/60 px-3 py-3 text-xs leading-relaxed text-muted-foreground">
-        Demo access · <span className="tabular font-medium text-foreground">{DEMO_CREDENTIALS.email}</span>
-        <br />
-        password · <span className="tabular font-medium text-foreground">{DEMO_CREDENTIALS.password}</span>
-      </div>
     </div>
   );
 }
