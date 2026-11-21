@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut, Shield, UserRound } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
 
 export function ProfilePanel() {
   const { user, logout } = useAuth();
@@ -76,10 +75,6 @@ export function ProfilePanel() {
           <TabsTrigger value="preferences" className="px-3">
             Preferences
           </TabsTrigger>
-          <TabsTrigger value="security" className="px-3">
-            <Shield className="size-3.5" />
-            Security
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
@@ -123,30 +118,6 @@ export function ProfilePanel() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="security" className="mt-4">
-          <Card className="uiverse-soft-card border-border/80 shadow-none">
-            <CardHeader>
-              <CardTitle className="text-base">Sign-in</CardTitle>
-              <CardDescription>
-                Demo sign-in for this hub.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="current">Current password</Label>
-                <Input id="current" type="password" defaultValue="fleetpair" className="h-11" />
-              </div>
-              <Button
-                className="h-10"
-                onClick={() =>
-                  toast.message("Password change is simulated in this demo.")
-                }
-              >
-                Update password
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
