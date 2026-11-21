@@ -35,6 +35,14 @@ export type BehaviourIssue = {
   riderId?: string;
 };
 
+/** Split of workshop spend — what managers ask for on the floor. */
+export type ServiceCostSplit = {
+  partsInr: number;
+  labourInr: number;
+  consumablesInr: number;
+  totalInr: number;
+};
+
 export type ServiceForecast = {
   nextServiceInDays: number;
   nextServiceLabel: string;
@@ -44,7 +52,38 @@ export type ServiceForecast = {
   currentMonthSpendInr: number;
   expectedNext30Inr: number;
   openIssueCount: number;
+  /** Spent this month, by bucket */
+  spentSplit: ServiceCostSplit;
+  /** Expected next 30 days, by bucket */
+  expectedSplit: ServiceCostSplit;
 };
+
+function splitCost(total: number, seed: number): ServiceCostSplit {
+  // Typical workshop mix for 2W EV: parts heavy, then labour, then pads/fluids
+  const partsPct = 0.48 + ((seed % 7) - 3) * 0.01;
+  const labourPct = 0.32 + ((seed % 5) - 2) * 0.01;
+  const partsInr = Math.round(total * partsPct);
+  const labourInr = Math.round(total * labourPct);
+  const consumablesInr = Math.max(0, total - partsInr - labourInr);
+  return {
+    partsInr,
+    labourInr,
+    consumablesInr,
+    totalInr: partsInr + labourInr + consumablesInr,
+  };
+}
+
+export function sumCostSplits(splits: ServiceCostSplit[]): ServiceCostSplit {
+  return splits.reduce(
+    (acc, s) => ({
+      partsInr: acc.partsInr + s.partsInr,
+      labourInr: acc.labourInr + s.labourInr,
+      consumablesInr: acc.consumablesInr + s.consumablesInr,
+      totalInr: acc.totalInr + s.totalInr,
+    }),
+    { partsInr: 0, labourInr: 0, consumablesInr: 0, totalInr: 0 },
+  );
+}
 
 const KIND_LABEL: Record<IssueKind, string> = {
   scrape: "Body scrape",
@@ -305,6 +344,7 @@ export function forecastService(
   const expectedNext30Inr =
     open.reduce((s, i) => s + i.expectedCostInr, 0) +
     (risk === "high" ? 1800 : risk === "medium" ? 900 : 300);
+  const seed = hashSeed(scooter.id + pack.id);
 
   const nextServiceLabel =
     nextServiceInDays <= 1
@@ -329,6 +369,8 @@ export function forecastService(
     currentMonthSpendInr,
     expectedNext30Inr,
     openIssueCount: open.length,
+    spentSplit: splitCost(currentMonthSpendInr, seed),
+    expectedSplit: splitCost(expectedNext30Inr, seed + 11),
   };
 }
 

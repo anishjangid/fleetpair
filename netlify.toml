@@ -1,0 +1,14 @@
+# App lives in /frontend — Netlify must build from there and publish `out`.
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# App Router static export — keep client routes working on refresh
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

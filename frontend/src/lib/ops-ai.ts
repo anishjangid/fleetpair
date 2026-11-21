@@ -28,14 +28,19 @@ export type FleetBriefInput = {
   residualAtRiskInr: number;
   matchingQualityPct: number;
   earningUnits: number;
+  waitingCount?: number;
 };
 
 export function buildMorningBrief(f: FleetBriefInput): string {
   const residualK = Math.round(f.residualAtRiskInr / 1000);
-  if (f.atRiskUnits > 0) {
-    return `${f.atRiskUnits} bike${f.atRiskUnits === 1 ? "" : "s"} in bad shape. About ₹${residualK}k of resale value is shaky. ${f.matchingQualityPct}% of riders covered. Want me to change a rider or open service?`;
+  const waiting = f.waitingCount ?? 0;
+  if (waiting > 0) {
+    return `${waiting} rider${waiting === 1 ? "" : "s"} waiting for a bike. ${f.earningUnits} out earning. Want me to match waiting?`;
   }
-  return `Board looks fine — ${f.earningUnits} bikes earning, condition avg ${f.avgHealth}, all riders covered. I can open service or check a rider.`;
+  if (f.atRiskUnits > 0) {
+    return `${f.atRiskUnits} bike${f.atRiskUnits === 1 ? "" : "s"} in bad shape. About ₹${residualK}k of resale value is shaky. Want me to change a rider or open service?`;
+  }
+  return `Floor looks fine — ${f.earningUnits} bikes earning, condition avg ${f.avgHealth}. I can open service or check a rider.`;
 }
 
 export function parseOpsIntent(raw: string, brief: FleetBriefInput): AiIntent {
@@ -48,18 +53,18 @@ export function parseOpsIntent(raw: string, brief: FleetBriefInput): AiIntent {
   }
 
   if (
-    /(morning|fleet)?\s*brief|status|summary|how('?s| is) (the )?(fleet|board|hub)/.test(
+    /(morning|fleet)?\s*brief|status|summary|how('?s| is) (the )?(fleet|board|hub|floor)/.test(
       q,
     )
   ) {
     return { type: "brief", reply: buildMorningBrief(brief) };
   }
 
-  if (/allocat|dispatch|match|pairing|who gets|critical|long pack/.test(q)) {
+  if (/allocat|dispatch|match|pairing|who gets|waiting|hand ?over/.test(q)) {
     return {
       type: "navigate",
       tab: "allocation",
-      reply: "Opening matches. Check who has the long pack.",
+      reply: "Opening matches — waiting riders and free bikes.",
     };
   }
 
@@ -79,11 +84,11 @@ export function parseOpsIntent(raw: string, brief: FleetBriefInput): AiIntent {
     };
   }
 
-  if (/service|maint|bay|workshop|issues?|cost|spend/.test(q)) {
+  if (/service|maint|bay|workshop|issues?|cost|spend|parts/.test(q)) {
     return {
       type: "navigate",
       tab: "service",
-      reply: "Service board — what's due, what it costs, open issues.",
+      reply: "Service board — parts, labour, what's due.",
     };
   }
 
@@ -107,7 +112,7 @@ export function parseOpsIntent(raw: string, brief: FleetBriefInput): AiIntent {
     return {
       type: "navigate",
       tab: "overview",
-      reply: "Back to Home — morning checklist.",
+      reply: "Back to Home — live checklist.",
     };
   }
 
@@ -144,13 +149,13 @@ export function parseOpsIntent(raw: string, brief: FleetBriefInput): AiIntent {
   }
 
   if (
-    /optim|recommend|fix match|best match|apply recommend|put (the )?best|long pack/.test(
+    /optim|recommend|fix match|best match|match waiting|assign waiting|auto.?assign/.test(
       q,
     )
   ) {
     return {
       type: "optimize",
-      reply: "Put the better rider on the long pack.",
+      reply: "Matching waiting riders to the best free bikes.",
     };
   }
 
@@ -175,15 +180,15 @@ export function parseOpsIntent(raw: string, brief: FleetBriefInput): AiIntent {
   return {
     type: "unknown",
     reply:
-      "Try: how's the board · bad bikes · open service · open matches · fix long pack · change rider.",
+      "Try: how's the board · bad bikes · open service · match waiting · change rider.",
   };
 }
 
 export const AI_CHIPS = [
   "How's the board?",
   "Open map",
+  "Match waiting",
   "Bad bikes",
   "Open service",
-  "Fix long pack",
   "Change rider",
 ] as const;

@@ -1,9 +1,10 @@
 /**
- * What the hub manager needs to handle this morning.
+ * What the hub manager needs to handle right now.
  * Plain floor language — not product/AI copy.
  */
 
 import type { DriverInsight, FleetPortfolio } from "./fleet-insights";
+import type { HubResult } from "./types";
 
 export type AttentionSection =
   | "allocation"
@@ -52,26 +53,33 @@ const SECTION_CAP = 2;
 
 export function buildAttentionQueue(
   portfolio: FleetPortfolio,
-  criticalLongTo: string,
-  recommended: string,
+  hub: HubResult,
 ): AttentionItem[] {
   const items: AttentionItem[] = [];
 
-  if (criticalLongTo !== recommended) {
+  if (hub.waitingCount > 0) {
+    const first = hub.floor.find((f) => f.status === "waiting");
     items.push({
-      id: "alloc-override",
+      id: "alloc-waiting",
       section: "allocation",
       severity: "now",
-      title: "Wrong rider on the long pack",
-      entity: "Long pack",
-      impact: "Someone may miss the day",
+      title:
+        hub.waitingCount === 1
+          ? "Rider waiting for a bike"
+          : `${hub.waitingCount} riders waiting`,
+      entity: first?.riderName ?? "Waiting",
+      impact:
+        hub.freeBikes.length > 0
+          ? `${hub.freeBikes.length} free bike${hub.freeBikes.length === 1 ? "" : "s"}`
+          : "No free bikes",
       action: "optimize",
-      actionLabel: "Put best match back",
+      actionLabel: "Match waiting",
+      riderId: first?.riderId,
     });
   }
 
   const shortFit = portfolio.vehicles.filter((v) => v.leaseStatus === "at-risk");
-  if (shortFit.length > 0 && criticalLongTo === recommended) {
+  if (shortFit.length > 0) {
     items.push({
       id: "alloc-at-risk-lease",
       section: "allocation",
@@ -128,7 +136,9 @@ export function buildAttentionQueue(
     .filter((d) => d.stressOnAsset >= 50)
     .sort((a, b) => b.stressOnAsset - a.stressOnAsset);
   for (const d of stressedDrivers.slice(0, SECTION_CAP)) {
-    const vehicle = portfolio.vehicles.find((v) => v.assignedRiderId === d.riderId);
+    const vehicle = portfolio.vehicles.find(
+      (v) => v.assignedRiderId === d.riderId,
+    );
     items.push({
       id: `driver-${d.riderId}`,
       section: "drivers",
@@ -180,7 +190,10 @@ export function buildAttentionQueue(
   const issueHeavy = portfolio.vehicles
     .filter((v) => v.service.openIssueCount >= 2)
     .sort((a, b) => b.service.openIssueCount - a.service.openIssueCount);
-  for (const v of issueHeavy.slice(0, Math.max(0, SECTION_CAP - dueSoon.length))) {
+  for (const v of issueHeavy.slice(
+    0,
+    Math.max(0, SECTION_CAP - dueSoon.length),
+  )) {
     items.push({
       id: `issues-${v.scooterId}`,
       section: "service",
@@ -197,7 +210,6 @@ export function buildAttentionQueue(
   return dedupeAttention(sortAttention(items));
 }
 
-/** One item per bike/rider so the morning list stays short. */
 function dedupeAttention(items: AttentionItem[]) {
   const seen = new Set<string>();
   const out: AttentionItem[] = [];

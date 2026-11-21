@@ -20,7 +20,8 @@ import {
   type IssueStatus,
 } from "@/lib/maintenance";
 import type { OpsTab } from "@/lib/ops-ai";
-import { recommendedCriticalLongTo } from "@/lib/scoring";
+import { autoAssignWaiting, evaluateHub } from "@/lib/scoring";
+import type { AssignmentMap } from "@/lib/types";
 import { TodoList } from "@/components/fleet/TodoList";
 import { FleetMap } from "@/components/fleet/FleetMap";
 import { AiOpsCopilot } from "@/components/fleet/AiOpsCopilot";
@@ -46,9 +47,10 @@ const NAV: { id: OpsTab; label: string; icon: typeof ClipboardList }[] = [
 ];
 
 export function OpsDashboard() {
-  const recommended = useMemo(() => recommendedCriticalLongTo(FIXTURE), []);
   const [tab, setTab] = useState<OpsTab>("overview");
-  const [criticalLongTo, setCriticalLongTo] = useState(recommended);
+  const [assignments, setAssignments] = useState<AssignmentMap>(
+    () => ({ ...FIXTURE.initialAssignments }),
+  );
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [selectedRider, setSelectedRider] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
@@ -56,14 +58,19 @@ export function OpsDashboard() {
     {},
   );
 
+  const hub = useMemo(
+    () => evaluateHub(FIXTURE, assignments, false),
+    [assignments],
+  );
+
   const portfolio = useMemo(
-    () => buildFleetPortfolio(FIXTURE, criticalLongTo, false),
-    [criticalLongTo],
+    () => buildFleetPortfolio(FIXTURE, assignments, false),
+    [assignments],
   );
 
   const attention = useMemo(
-    () => buildAttentionQueue(portfolio, criticalLongTo, recommended),
-    [portfolio, criticalLongTo, recommended],
+    () => buildAttentionQueue(portfolio, hub),
+    [portfolio, hub],
   );
 
   const brief = useMemo(
@@ -73,8 +80,9 @@ export function OpsDashboard() {
       residualAtRiskInr: portfolio.residualAtRiskInr,
       matchingQualityPct: portfolio.matchingQualityPct,
       earningUnits: portfolio.earningUnits,
+      waitingCount: hub.waitingCount,
     }),
-    [portfolio],
+    [portfolio, hub],
   );
 
   const todoLeft = attention.filter((i) => !dismissed.has(i.id)).length;
@@ -117,8 +125,8 @@ export function OpsDashboard() {
   }
 
   function optimizeMatch() {
-    setCriticalLongTo(recommended);
-    toast.success("Better match put back");
+    setAssignments((prev) => autoAssignWaiting(FIXTURE, prev));
+    toast.success("Waiting riders matched");
   }
 
   function bookBay(v?: VehicleInsight) {
@@ -194,8 +202,8 @@ export function OpsDashboard() {
 
   const pageTitle =
     tab === "overview"
-      ? "Morning board"
-      : (NAV.find((n) => n.id === tab)?.label ?? "Morning board");
+      ? "Live floor"
+      : (NAV.find((n) => n.id === tab)?.label ?? "Live floor");
 
   return (
     <div className="pb-2 lg:pb-0">
@@ -323,15 +331,14 @@ export function OpsDashboard() {
 
           {tab === "allocation" && (
             <DispatchBoard
-              criticalLongTo={criticalLongTo}
-              onCriticalChange={setCriticalLongTo}
-              recommended={recommended}
+              assignments={assignments}
+              onAssignmentsChange={setAssignments}
             />
           )}
 
           {tab === "service" && (
             <section className="space-y-4">
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
                 <Kpi
                   label="Spent"
                   value={`₹${Math.round(portfolio.serviceSpendThisMonthInr / 1000)}k`}
@@ -341,18 +348,62 @@ export function OpsDashboard() {
                   value={`₹${Math.round(portfolio.serviceExpectedNext30Inr / 1000)}k`}
                 />
                 <Kpi label="Due soon" value={`${portfolio.bikesDueSoon}`} />
+                <Kpi
+                  label="Open issues"
+                  value={`${portfolio.openIssueCount}`}
+                />
+              </div>
+
+              <div className="surface space-y-3 px-3 py-3 sm:px-4">
+                <p className="text-sm font-semibold">Cost mix · this month</p>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <CostBucket
+                    label="Parts"
+                    value={portfolio.serviceSpentSplit.partsInr}
+                    hint="Pads, panels, harness"
+                  />
+                  <CostBucket
+                    label="Labour"
+                    value={portfolio.serviceSpentSplit.labourInr}
+                    hint="Bay time"
+                  />
+                  <CostBucket
+                    label="Consumables"
+                    value={portfolio.serviceSpentSplit.consumablesInr}
+                    hint="Fluids, fasteners"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Next 30d expected · parts ₹
+                  {portfolio.serviceExpectedSplit.partsInr.toLocaleString(
+                    "en-IN",
+                  )}{" "}
+                  · labour ₹
+                  {portfolio.serviceExpectedSplit.labourInr.toLocaleString(
+                    "en-IN",
+                  )}{" "}
+                  · consumables ₹
+                  {portfolio.serviceExpectedSplit.consumablesInr.toLocaleString(
+                    "en-IN",
+                  )}
+                </p>
               </div>
 
               <div className="surface overflow-x-auto">
-                <table className="w-full min-w-[520px] text-left text-sm">
+                <table className="w-full min-w-[560px] text-left text-sm">
                   <thead className="border-b border-border bg-muted/50 text-xs text-muted-foreground">
                     <tr>
                       <th className="px-3 py-2.5 font-medium sm:px-4">Bike</th>
                       <th className="hidden px-4 py-2.5 font-medium sm:table-cell">
                         Next service
                       </th>
-                      <th className="px-3 py-2.5 font-medium sm:px-4">Issues</th>
-                      <th className="px-3 py-2.5 font-medium sm:px-4">Next cost</th>
+                      <th className="px-3 py-2.5 font-medium sm:px-4">Parts</th>
+                      <th className="px-3 py-2.5 font-medium sm:px-4">
+                        Labour
+                      </th>
+                      <th className="px-3 py-2.5 font-medium sm:px-4">
+                        Next ₹
+                      </th>
                       <th className="px-3 py-2.5 font-medium sm:px-4" />
                     </tr>
                   </thead>
@@ -372,14 +423,24 @@ export function OpsDashboard() {
                           <td className="px-4 py-3">
                             <p className="font-medium">{v.scooterLabel}</p>
                             <p className="text-xs text-muted-foreground">
-                              {v.assignedRiderName ?? "No rider"}
+                              {v.assignedRiderName ?? "Free"} ·{" "}
+                              {v.service.openIssueCount} issues
                             </p>
                           </td>
                           <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">
                             {v.service.nextServiceLabel}
                           </td>
                           <td className="px-4 py-3 tabular">
-                            {v.service.openIssueCount}
+                            ₹
+                            {v.service.expectedSplit.partsInr.toLocaleString(
+                              "en-IN",
+                            )}
+                          </td>
+                          <td className="px-4 py-3 tabular">
+                            ₹
+                            {v.service.expectedSplit.labourInr.toLocaleString(
+                              "en-IN",
+                            )}
                           </td>
                           <td className="px-4 py-3 tabular">
                             ₹
@@ -772,6 +833,26 @@ function Kpi({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-lg font-bold tracking-[-0.03em] tabular sm:text-xl">
         {value}
       </p>
+    </div>
+  );
+}
+
+function CostBucket({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border px-3 py-2.5">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className="mt-1 text-base font-bold tabular">
+        ₹{value.toLocaleString("en-IN")}
+      </p>
+      <p className="mt-0.5 text-[10px] text-muted-foreground">{hint}</p>
     </div>
   );
 }

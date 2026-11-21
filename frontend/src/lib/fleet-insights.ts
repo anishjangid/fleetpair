@@ -6,7 +6,9 @@ import {
   buildRiderIssues,
   buildVehicleIssues,
   forecastService,
+  sumCostSplits,
   type BehaviourIssue,
+  type ServiceCostSplit,
   type ServiceForecast,
 } from "./maintenance";
 import { FIXTURE } from "./fixture";
@@ -16,7 +18,7 @@ import {
   riderWear,
   scooterReadiness,
 } from "./scoring";
-import type { Fixture, Pairing, WearResult } from "./types";
+import type { AssignmentMap, Fixture, Pairing, WearResult } from "./types";
 
 export type HealthBand = "strong" | "watch" | "at-risk";
 export type LeaseStatus = "earning" | "idle" | "workshop" | "at-risk";
@@ -83,6 +85,10 @@ export type FleetPortfolio = {
   serviceSpendThisMonthInr: number;
   /** Expected service spend next 30 days if behaviour continues */
   serviceExpectedNext30Inr: number;
+  /** Parts / labour / consumables — spent this month */
+  serviceSpentSplit: ServiceCostSplit;
+  /** Parts / labour / consumables — expected next 30d */
+  serviceExpectedSplit: ServiceCostSplit;
   openIssueCount: number;
   bikesDueSoon: number;
 };
@@ -110,11 +116,10 @@ export function pairingStress(
 
 export function buildFleetPortfolio(
   fixture: Fixture = FIXTURE,
-  criticalLongTo?: string,
+  assignments: AssignmentMap = fixture.initialAssignments,
   outage = false,
 ): FleetPortfolio {
-  const longTo = criticalLongTo ?? fixture.criticalRiderIds[1];
-  const hub = evaluateHub(fixture, longTo, outage);
+  const hub = evaluateHub(fixture, assignments, outage);
   const byRider = Object.fromEntries(hub.pairings.map((p) => [p.riderId, p]));
   const packs = Object.fromEntries(fixture.packs.map((p) => [p.id, p]));
   const ridersById = Object.fromEntries(fixture.riders.map((r) => [r.id, r]));
@@ -260,7 +265,7 @@ export function buildFleetPortfolio(
   const earningUnits = vehicles.filter((v) => v.leaseStatus === "earning").length;
   const atRiskUnits = vehicles.filter((v) => v.leaseStatus === "at-risk").length;
   const matchingQualityPct = Math.round(
-    (hub.bookingsSupported / hub.bookingsTotal) * 100,
+    (hub.outCount / Math.max(hub.outCount + hub.waitingCount, 1)) * 100,
   );
   const workshopAvoidedInr =
     vehicles.filter((v) => v.healthBand === "strong").length * 1200 +
@@ -281,6 +286,12 @@ export function buildFleetPortfolio(
   const bikesDueSoon = vehicles.filter(
     (v) => v.service.nextServiceInDays <= 10,
   ).length;
+  const serviceSpentSplit = sumCostSplits(
+    vehicles.map((v) => v.service.spentSplit),
+  );
+  const serviceExpectedSplit = sumCostSplits(
+    vehicles.map((v) => v.service.expectedSplit),
+  );
 
   return {
     vehicles,
@@ -298,6 +309,8 @@ export function buildFleetPortfolio(
       "Match the right rider to the bike so service stays predictable and resale value holds.",
     serviceSpendThisMonthInr,
     serviceExpectedNext30Inr,
+    serviceSpentSplit,
+    serviceExpectedSplit,
     openIssueCount,
     bikesDueSoon,
   };

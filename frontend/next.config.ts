@@ -1,15 +1,13 @@
 import type { NextConfig } from "next";
 
+/**
+ * Static export for Netlify (and any static host).
+ * Challenge API falls back to local IDs when /api is unavailable.
+ */
 const nextConfig: NextConfig = {
-  async rewrites() {
-    const api = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${api}/api/:path*`,
-      },
-    ];
-  },
+  output: "export",
+  images: { unoptimized: true },
+  trailingSlash: true,
 };
 
 export default nextConfig;

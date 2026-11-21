@@ -1,8 +1,11 @@
 import { FIXTURE } from "./fixture";
 import type {
+  AssignmentMap,
   EvaluateResult,
   FitResult,
   Fixture,
+  FloorRider,
+  FreeBike,
   HubResult,
   Pack,
   Pairing,
@@ -198,11 +201,7 @@ function buildAssets(fixture: Fixture): Asset[] {
   });
 }
 
-function buildPairing(
-  rider: Rider,
-  asset: Asset,
-  criticalIds: string[],
-): Pairing {
+function buildPairing(rider: Rider, asset: Asset): Pairing {
   const wear = riderWear(rider);
   const pattern = inferUsagePattern(rider);
   const fit = routeFit({
@@ -230,84 +229,110 @@ function buildPairing(
     readiness: asset.readiness,
     handoverAction: action,
     plainLanguage: plainLanguage(rider, fit, action, asset.usableKm),
-    isCritical: criticalIds.includes(rider.id),
   };
 }
 
-/** Greedy: longest leg first → longest remaining pack that fits (else best available). */
-function matchRidersToAssets(
-  riders: Rider[],
-  assets: Asset[],
-): Map<string, Asset> {
-  const sortedRiders = [...riders].sort(
-    (a, b) => b.longestLegKm - a.longestLegKm,
-  );
-  const pool = [...assets].sort((a, b) => b.usableKm - a.usableKm);
-  const assignment = new Map<string, Asset>();
+/** Best free bike for a waiting rider — longest pack that covers their swap gap. */
+export function suggestBikeForRider(
+  rider: Rider,
+  freeAssets: Asset[],
+): Asset | null {
+  if (freeAssets.length === 0) return null;
+  const sorted = [...freeAssets].sort((a, b) => b.usableKm - a.usableKm);
+  const fit = sorted.find((a) => a.usableKm >= rider.longestLegKm);
+  return fit ?? sorted[0];
+}
 
-  for (const rider of sortedRiders) {
-    const fitIdx = pool.findIndex((a) => a.usableKm >= rider.longestLegKm);
-    const idx = fitIdx >= 0 ? fitIdx : 0;
-    assignment.set(rider.id, pool[idx]);
-    pool.splice(idx, 1);
-  }
-  return assignment;
+export function cloneAssignments(map: AssignmentMap): AssignmentMap {
+  return { ...map };
 }
 
 /**
- * Evaluate a full hub morning board.
- * `criticalLongTo` decides who receives the longest-range scooter in the critical pair.
- * Remaining riders are auto-matched to remaining assets.
+ * Live floor: riders wait, get a bike, go out, come back anytime.
+ * `assignments` is riderId → scooterId | null (null = waiting at hub).
  */
 export function evaluateHub(
   fixture: Fixture = FIXTURE,
-  criticalLongTo: string,
+  assignments: AssignmentMap = fixture.initialAssignments,
   outage = false,
 ): HubResult {
-  const [critA, critB] = fixture.criticalRiderIds;
   const riders: Rider[] = fixture.riders.map((r) => {
     if (outage && r.id === fixture.outage.riderId) {
       return { ...r, longestLegKm: fixture.outage.longestLegKm };
     }
     return { ...r };
   });
-
+  const ridersById = Object.fromEntries(riders.map((r) => [r.id, r]));
   const assets = buildAssets(fixture);
   const byScooter = Object.fromEntries(assets.map((a) => [a.scooter.id, a]));
-  const sortedByRange = [...assets].sort((a, b) => b.usableKm - a.usableKm);
-  const longAsset = sortedByRange[0];
-  const shortAsset = sortedByRange[sortedByRange.length - 1];
 
-  // Critical pair always uses the longest and shortest packs (demo conflict).
-  const criticalAssignment = new Map<string, Asset>();
-  if (criticalLongTo === critA) {
-    criticalAssignment.set(critA, longAsset);
-    criticalAssignment.set(critB, shortAsset);
-  } else {
-    criticalAssignment.set(critB, longAsset);
-    criticalAssignment.set(critA, shortAsset);
+  const usedScooterIds = new Set(
+    Object.values(assignments).filter((id): id is string => !!id),
+  );
+  const freeAssets = assets.filter((a) => !usedScooterIds.has(a.scooter.id));
+  const freeBikes: FreeBike[] = freeAssets.map((a) => ({
+    scooterId: a.scooter.id,
+    scooterLabel: a.scooter.label,
+    packLabel: a.pack.label,
+    usableKm: a.usableKm,
+    readiness: a.readiness,
+  }));
+
+  const pairings: Pairing[] = [];
+  for (const [riderId, scooterId] of Object.entries(assignments)) {
+    if (!scooterId) continue;
+    const rider = ridersById[riderId];
+    const asset = byScooter[scooterId];
+    if (!rider || !asset) continue;
+    pairings.push(buildPairing(rider, asset));
   }
 
-  const remainingRiders = riders.filter(
-    (r) => r.id !== critA && r.id !== critB,
-  );
-  const usedIds = new Set(
-    [...criticalAssignment.values()].map((a) => a.scooter.id),
-  );
-  const remainingAssets = assets.filter((a) => !usedIds.has(a.scooter.id));
-  const rest = matchRidersToAssets(remainingRiders, remainingAssets);
+  const floor: FloorRider[] = riders.map((rider) => {
+    const assigned = assignments[rider.id];
+    const status =
+      assigned === undefined
+        ? "off"
+        : assigned === null
+          ? "waiting"
+          : "out";
+    const pairing =
+      status === "out"
+        ? pairings.find((p) => p.riderId === rider.id) ?? null
+        : null;
+    const suggestion =
+      status === "waiting" ? suggestBikeForRider(rider, freeAssets) : null;
+    const suggestedFit = suggestion
+      ? routeFit({
+          usableKm: suggestion.usableKm,
+          longestLegKm: rider.longestLegKm,
+          scooter: suggestion.scooter,
+          pack: suggestion.pack,
+          dailyKm: rider.dailyKm,
+        })
+      : null;
 
-  const assignment = new Map<string, Asset>([
-    ...criticalAssignment,
-    ...rest,
-  ]);
+    return {
+      riderId: rider.id,
+      riderName: rider.name,
+      usualArea: rider.usualArea,
+      dailyKm: rider.dailyKm,
+      longestLegKm: rider.longestLegKm,
+      pattern: inferUsagePattern(rider),
+      wear: riderWear(rider),
+      status,
+      pairing,
+      suggestedScooterId: suggestion?.scooter.id ?? null,
+      suggestedScooterLabel: suggestion?.scooter.label ?? null,
+      suggestedUsableKm: suggestion?.usableKm ?? null,
+      suggestedFit,
+    };
+  });
 
-  const pairings = riders.map((rider) =>
-    buildPairing(rider, assignment.get(rider.id)!, fixture.criticalRiderIds),
-  );
-
-  const supported = pairings.filter((p) => p.fit.supportsBooking).length;
-  const techHandovers = pairings.filter(
+  const active = pairings;
+  const supported = active.filter((p) => p.fit.supportsBooking).length;
+  const waitingCount = floor.filter((f) => f.status === "waiting").length;
+  const outCount = floor.filter((f) => f.status === "out").length;
+  const techHandovers = active.filter(
     (p) =>
       p.fit.supportsBooking &&
       (p.handoverAction === "technician handover" ||
@@ -317,13 +342,14 @@ export function evaluateHub(
   ).length;
 
   let note: string | null = null;
-  if (outage && supported < pairings.length) {
-    note =
-      "one booking needs another compatible pack or a different swap point.";
-  } else if (supported < pairings.length) {
-    const short = pairings.find((p) => !p.fit.supportsBooking);
+  if (waitingCount > 0 && freeBikes.length === 0) {
+    note = `${waitingCount} rider${waitingCount === 1 ? "" : "s"} waiting — no free bikes.`;
+  } else if (waitingCount > 0) {
+    note = `${waitingCount} waiting · ${freeBikes.length} free bike${freeBikes.length === 1 ? "" : "s"}.`;
+  } else if (supported < active.length) {
+    const short = active.find((p) => !p.fit.supportsBooking);
     note = short
-      ? `${short.riderName} cannot cover their next stretch on the assigned pack — reassign before dispatch.`
+      ? `${short.riderName} is short on range — swap pack or bike before they leave.`
       : null;
   }
 
@@ -332,34 +358,84 @@ export function evaluateHub(
     shiftLabel: fixture.shiftLabel,
     outage,
     scaleMaxKm: 70,
-    pairings,
+    pairings: active,
+    floor,
+    freeBikes,
+    waitingCount,
+    outCount,
     bookingsSupported: supported,
-    bookingsTotal: pairings.length,
+    bookingsTotal: Math.max(active.length, 1),
     grossRentInr: supported * fixture.dailyRentInr,
     dailyRentInr: fixture.dailyRentInr,
     techHandovers,
-    rentAtRiskInr: (pairings.length - supported) * fixture.dailyRentInr,
+    rentAtRiskInr:
+      (active.length - supported + waitingCount) * fixture.dailyRentInr,
     note,
-    critical: {
-      riderIds: fixture.criticalRiderIds,
-      longRangeScooterId: longAsset.scooter.id,
-      longRangeKm: longAsset.usableKm,
-      shortRangeKm: shortAsset.usableKm,
-    },
   };
 }
 
-export function recommendedCriticalLongTo(
-  fixture: Fixture = FIXTURE,
-): string {
-  // Prefer the assignment that maximises bookings (then rent).
-  const [a, b] = fixture.criticalRiderIds;
-  const optA = evaluateHub(fixture, a, false);
-  const optB = evaluateHub(fixture, b, false);
-  if (optB.bookingsSupported !== optA.bookingsSupported) {
-    return optB.bookingsSupported > optA.bookingsSupported ? b : a;
+/** Auto-assign every waiting rider to the best free bike. */
+export function autoAssignWaiting(
+  fixture: Fixture,
+  assignments: AssignmentMap,
+): AssignmentMap {
+  const next = cloneAssignments(assignments);
+  const ridersById = Object.fromEntries(fixture.riders.map((r) => [r.id, r]));
+  const assets = buildAssets(fixture);
+  const byScooter = Object.fromEntries(assets.map((a) => [a.scooter.id, a]));
+
+  const waiting = Object.entries(next)
+    .filter(([, s]) => s === null)
+    .map(([id]) => ridersById[id])
+    .filter(Boolean)
+    .sort((a, b) => b.longestLegKm - a.longestLegKm);
+
+  for (const rider of waiting) {
+    const used = new Set(
+      Object.values(next).filter((id): id is string => !!id),
+    );
+    const free = assets.filter((a) => !used.has(a.scooter.id));
+    const pick = suggestBikeForRider(rider, free);
+    if (pick) next[rider.id] = pick.scooter.id;
   }
-  return optB.grossRentInr >= optA.grossRentInr ? b : a;
+
+  // Ensure suggested bikes still exist in map for type safety
+  void byScooter;
+  return next;
+}
+
+export function assignRider(
+  assignments: AssignmentMap,
+  riderId: string,
+  scooterId: string,
+): AssignmentMap {
+  const next = cloneAssignments(assignments);
+  // Free whoever currently has this bike
+  for (const [rid, sid] of Object.entries(next)) {
+    if (sid === scooterId) next[rid] = null;
+  }
+  next[riderId] = scooterId;
+  return next;
+}
+
+export function releaseRider(
+  assignments: AssignmentMap,
+  riderId: string,
+): AssignmentMap {
+  const next = cloneAssignments(assignments);
+  if (riderId in next) next[riderId] = null;
+  return next;
+}
+
+export function checkInRider(
+  assignments: AssignmentMap,
+  riderId: string,
+): AssignmentMap {
+  const next = cloneAssignments(assignments);
+  if (!(riderId in next) || next[riderId] === undefined) {
+    next[riderId] = null;
+  }
+  return next;
 }
 
 /** Legacy 2-rider evaluator kept for challenge share + acceptance. */
@@ -368,8 +444,19 @@ export function evaluateAssignment(
   longRangeTo: "asha" | "ravi",
   outage = false,
 ): EvaluateResult {
-  const hub = evaluateHub(fixture, longRangeTo, outage);
-  const critical = hub.pairings.filter((p) => p.isCritical);
+  const [critA, critB] = fixture.criticalRiderIds;
+  const assets = buildAssets(fixture);
+  const sorted = [...assets].sort((a, b) => b.usableKm - a.usableKm);
+  const longAsset = sorted[0];
+  const shortAsset = sorted[sorted.length - 1];
+  const assignments: AssignmentMap = {
+    [critA]: longRangeTo === critA ? longAsset.scooter.id : shortAsset.scooter.id,
+    [critB]: longRangeTo === critB ? longAsset.scooter.id : shortAsset.scooter.id,
+  };
+  const hub = evaluateHub(fixture, assignments, outage);
+  const critical = hub.pairings.filter((p) =>
+    fixture.criticalRiderIds.includes(p.riderId),
+  );
   return {
     longRangeTo,
     outage,
@@ -405,13 +492,12 @@ export function evaluateAssignment(
     dailyRentInr: fixture.dailyRentInr,
     note: hub.note,
     scooterRanges: {
-      x: hub.critical.shortRangeKm,
-      y: hub.critical.longRangeKm,
+      x: shortAsset.usableKm,
+      y: longAsset.usableKm,
     },
   };
 }
 
-// Re-export for older imports
 export type { EvaluateResult };
 
 export async function createChallenge(payload: {
