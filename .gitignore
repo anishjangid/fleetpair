@@ -1,0 +1,16 @@
+# dependencies / env
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+.next/
+out/
+dist/
+*.db
+.DS_Store
+.pytest_cache/
+*.egg-info/
+frontend/tsconfig.tsbuildinfo
+backend/fleetpair.db

@@ -1,0 +1,10 @@
+{
+  "name": "fleetpair",
+  "private": true,
+  "scripts": {
+    "dev:web": "npm --prefix frontend run dev",
+    "dev:api": "cd backend && .venv/bin/uvicorn app.main:app --reload --port 8000",
+    "test:api": "cd backend && PYTHONPATH=. .venv/bin/pytest -q",
+    "build": "npm --prefix frontend run build"
+  }
+}
